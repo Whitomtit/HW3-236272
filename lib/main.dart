@@ -1,6 +1,19 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 
+const _biggerFontSize = 18.0;
+const _biggerFont = TextStyle(fontSize: _biggerFontSize);
+const _primaryColor = Colors.deepPurple;
+const _foregroundColor = Colors.white;
+const _baseIndent = 16.0;
+
+final _saved = <WordPair>{};
+
+void notImplemented(BuildContext context, String feature) {
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text("$feature is not implemented yet", style: _biggerFont)));
+}
+
 void main() {
   runApp(const MyApp());
 }
@@ -14,24 +27,22 @@ class MyApp extends StatelessWidget {
         title: 'Startup Name Generator',
         theme: ThemeData(
             appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
+          backgroundColor: _primaryColor,
+          foregroundColor: _foregroundColor,
         )),
-        home: const RandomWords());
+        home: const RandomWordsRoot());
   }
 }
 
-class RandomWords extends StatefulWidget {
-  const RandomWords({Key? key}) : super(key: key);
+class RandomWordsRoot extends StatefulWidget {
+  const RandomWordsRoot({Key? key}) : super(key: key);
 
   @override
-  State<RandomWords> createState() => _RandomWordsState();
+  State<RandomWordsRoot> createState() => _RandomWordsRootState();
 }
 
-class _RandomWordsState extends State<RandomWords> {
+class _RandomWordsRootState extends State<RandomWordsRoot> {
   final _suggestions = <WordPair>[];
-  final _saved = <WordPair>{};
-  final _biggerFont = const TextStyle(fontSize: 18);
 
   @override
   Widget build(BuildContext context) {
@@ -40,14 +51,19 @@ class _RandomWordsState extends State<RandomWords> {
         title: const Text('Startup Name Generator'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.star),
             onPressed: _pushSaved,
-            icon: const Icon(Icons.list),
             tooltip: 'Saved Suggestions',
           ),
+          IconButton(
+            icon: const Icon(Icons.login),
+            onPressed: _pushLogin,
+            tooltip: 'Login',
+          )
         ],
       ),
       body: ListView.builder(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(_baseIndent),
           itemBuilder: (context, i) {
             if (i.isOdd) return const Divider();
 
@@ -82,27 +98,105 @@ class _RandomWordsState extends State<RandomWords> {
   }
 
   void _pushSaved() {
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) {
-      final tiles = _saved.map((pair) {
-        return ListTile(
-          title: Text(
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (context) => const SavedRoot()));
+  }
+
+  void _pushLogin() {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (context) => const LoginRoot()));
+  }
+}
+
+class SavedRoot extends StatelessWidget {
+  const SavedRoot({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final tiles = _saved.map((pair) {
+      return Dismissible(
+          key: ValueKey<WordPair>(pair),
+          background: Container(
+            color: _primaryColor,
+            child: Row(
+              children: const [
+                SizedBox(width: _baseIndent),
+                Icon(Icons.delete, color: _foregroundColor),
+                SizedBox(width: _baseIndent),
+                Text(
+                  "Delete Suggestion",
+                  style: TextStyle(
+                      color: _foregroundColor, fontSize: _biggerFontSize),
+                )
+              ],
+            ),
+          ),
+          confirmDismiss: (_) => Future(() {
+                notImplemented(context, "Deletion");
+                return false;
+              }),
+          child: ListTile(
+              title: Text(
             pair.asPascalCase,
             style: _biggerFont,
-          ),
-        );
-      });
-      final divided = tiles.isNotEmpty
-          ? ListTile.divideTiles(
-              context: context,
-              tiles: tiles,
-            ).toList()
-          : <Widget>[];
-      return Scaffold(
+          )));
+    });
+    final divided = tiles.isNotEmpty
+        ? ListTile.divideTiles(
+            context: context,
+            tiles: tiles,
+          ).toList()
+        : <Widget>[];
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Saved Suggestions'),
+      ),
+      body: ListView(children: divided),
+    );
+  }
+}
+
+class LoginRoot extends StatelessWidget {
+  const LoginRoot({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
         appBar: AppBar(
-          title: const Text('Saved Suggestions'),
+          title: const Text("Login"),
         ),
-        body: ListView(children: divided),
-      );
-    }));
+        body: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            child: Column(
+              children: [
+                const Text(
+                    "Welcome to Startup Names Generator"
+                    "\nPlease log in!",
+                    style: _biggerFont),
+                const SizedBox(height: _baseIndent),
+                TextFormField(
+                  decoration: const InputDecoration(hintText: "Email"),
+                ),
+                const SizedBox(height: _baseIndent),
+                TextFormField(
+                  decoration: const InputDecoration(hintText: "Password"),
+                ),
+                const SizedBox(height: _baseIndent),
+                ElevatedButton(
+                  onPressed: () => notImplemented(context, "Login"),
+                  style: ElevatedButton.styleFrom(
+                      textStyle: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold),
+                      backgroundColor: _primaryColor,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.0)),
+                      minimumSize: const Size.fromHeight(40)),
+                  child: const Text("Log in"),
+                )
+              ],
+            ),
+          ),
+        ));
   }
 }
