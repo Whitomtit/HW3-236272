@@ -30,18 +30,18 @@ class MyApp extends StatelessWidget {
           backgroundColor: _primaryColor,
           foregroundColor: _foregroundColor,
         )),
-        home: const RandomWordsRoot());
+        home: const RandomWordsRoute());
   }
 }
 
-class RandomWordsRoot extends StatefulWidget {
-  const RandomWordsRoot({Key? key}) : super(key: key);
+class RandomWordsRoute extends StatefulWidget {
+  const RandomWordsRoute({Key? key}) : super(key: key);
 
   @override
-  State<RandomWordsRoot> createState() => _RandomWordsRootState();
+  State<RandomWordsRoute> createState() => _RandomWordsRouteState();
 }
 
-class _RandomWordsRootState extends State<RandomWordsRoot> {
+class _RandomWordsRouteState extends State<RandomWordsRoute> {
   final _suggestions = <WordPair>[];
 
   @override
@@ -98,18 +98,18 @@ class _RandomWordsRootState extends State<RandomWordsRoot> {
   }
 
   void _pushSaved() {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (context) => const SavedRoot()));
+    Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (context) => const SavedRoute()));
   }
 
   void _pushLogin() {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (context) => const LoginRoot()));
+    Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (context) => const LoginRoute()));
   }
 }
 
-class SavedRoot extends StatelessWidget {
-  const SavedRoot({Key? key}) : super(key: key);
+class SavedRoute extends StatelessWidget {
+  const SavedRoute({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -156,8 +156,8 @@ class SavedRoot extends StatelessWidget {
   }
 }
 
-class LoginRoot extends StatelessWidget {
-  const LoginRoot({Key? key}) : super(key: key);
+class LoginRoute extends StatelessWidget {
+  const LoginRoute({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
