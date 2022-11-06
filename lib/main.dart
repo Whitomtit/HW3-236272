@@ -1,4 +1,5 @@
 import 'package:english_words/english_words.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 const _biggerFontSize = 18.0;
@@ -15,7 +16,31 @@ void notImplemented(BuildContext context, String feature) {
 }
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(App());
+}
+
+class App extends StatelessWidget {
+  final Future<FirebaseApp> _initialization = Firebase.initializeApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _initialization,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+              body: Center(
+                  child: Text(snapshot.error.toString(),
+                      textDirection: TextDirection.ltr)));
+        }
+        if (snapshot.connectionState == ConnectionState.done) {
+          return MyApp();
+        }
+        return Center(child: CircularProgressIndicator());
+      },
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -183,16 +208,29 @@ class LoginRoute extends StatelessWidget {
                   decoration: const InputDecoration(hintText: "Password"),
                 ),
                 const SizedBox(height: _baseIndent),
-                ElevatedButton(
+                OutlinedButton(
                   onPressed: () => notImplemented(context, "Login"),
-                  style: ElevatedButton.styleFrom(
+                  style: OutlinedButton.styleFrom(
                       textStyle: const TextStyle(
                           fontSize: 20, fontWeight: FontWeight.bold),
-                      backgroundColor: _primaryColor,
+                      foregroundColor: _primaryColor,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30.0)),
                       minimumSize: const Size.fromHeight(40)),
                   child: const Text("Log in"),
+                ),
+                const SizedBox(height: _baseIndent),
+                ElevatedButton(
+                  onPressed: () => notImplemented(context, "Sign Up"),
+                  style: ElevatedButton.styleFrom(
+                      textStyle: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold),
+                      backgroundColor: _primaryColor,
+                      foregroundColor: _foregroundColor,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.0)),
+                      minimumSize: const Size.fromHeight(40)),
+                  child: const Text("Sign up"),
                 )
               ],
             ),
