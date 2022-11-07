@@ -101,17 +101,17 @@ class _RandomWordsRouteState extends State<RandomWordsRoute> {
             onPressed: _pushSaved,
             tooltip: 'Saved Suggestions',
           ),
-          context.watch<UserDataNotifier>().status == AuthStatus.authenticated ?
-          IconButton(
-            icon: const Icon(Icons.exit_to_app),
-            onPressed: _pushLogout,
-            tooltip: 'Logout',
-          ) :
-          IconButton(
-            icon: const Icon(Icons.login),
-            onPressed: _pushLogin,
-            tooltip: 'Login',
-          )
+          context.watch<UserDataNotifier>().status == AuthStatus.authenticated
+              ? IconButton(
+                  icon: const Icon(Icons.exit_to_app),
+                  onPressed: _pushLogout,
+                  tooltip: 'Logout',
+                )
+              : IconButton(
+                  icon: const Icon(Icons.login),
+                  onPressed: _pushLogin,
+                  tooltip: 'Login',
+                )
         ],
       ),
       body: ListView.builder(
@@ -160,7 +160,9 @@ class _RandomWordsRouteState extends State<RandomWordsRoute> {
   }
 
   void _pushLogout() {
-    context.read<UserDataNotifier>()..signOut()..status = AuthStatus.unauthenticated;
+    context.read<UserDataNotifier>()
+      ..signOut()
+      ..status = AuthStatus.unauthenticated;
     showSnackbar(context, "Successfully logged out");
   }
 }
@@ -188,10 +190,36 @@ class SavedRoute extends StatelessWidget {
               ],
             ),
           ),
-          confirmDismiss: (_) => Future(() {
-                notImplemented(context, "Deletion");
-                return false;
-              }),
+          confirmDismiss: (_) => showDialog<bool>(
+              context: context,
+              builder: (BuildContext context) => AlertDialog(
+                    title: const Text("Delete Suggestion"),
+                    content: Text(
+                        "Are you sure you want to delete ${pair.asPascalCase} from your saved suggestions?"),
+                    actions: <Widget>[
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                            textStyle: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold),
+                            foregroundColor: _primaryColor,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.0))),
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text("Yes"),
+                      ),
+                      ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          style: ElevatedButton.styleFrom(
+                            textStyle: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold),
+                            backgroundColor: _primaryColor,
+                            foregroundColor: _foregroundColor,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.0)),
+                          ),
+                          child: const Text("No")),
+                    ],
+                  )),
           child: ListTile(
               title: Text(
             pair.asPascalCase,
