@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_words/english_words.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,8 +11,6 @@ const _biggerFont = TextStyle(fontSize: _biggerFontSize);
 const _primaryColor = Colors.deepPurple;
 const _foregroundColor = Colors.white;
 const _baseIndent = 16.0;
-
-final _saved = <WordPair>{};
 
 void showSnackbar(BuildContext context, String text) {
   ScaffoldMessenger.of(context)
@@ -66,17 +65,25 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (ctr) => UserDataNotifier(),
-      child: MaterialApp(
-          title: 'Startup Name Generator',
-          theme: ThemeData(
-              appBarTheme: const AppBarTheme(
-            backgroundColor: _primaryColor,
-            foregroundColor: _foregroundColor,
-          )),
-          home: const RandomWordsRoute()),
-    );
+    return MultiProvider(
+        providers: [
+          ChangeNotifierProvider<UserDataNotifier>(
+              create: (_) => UserDataNotifier()),
+          ChangeNotifierProxyProvider<UserDataNotifier, SavedNotifier>(
+              create: (context) =>
+                  SavedNotifier(context.read<UserDataNotifier>()),
+              update: (context, userDataNotifier, savedNotifier) =>
+                  savedNotifier?.update(userDataNotifier) ??
+                  SavedNotifier(userDataNotifier))
+        ],
+        child: MaterialApp(
+            title: 'Startup Name Generator',
+            theme: ThemeData(
+                appBarTheme: const AppBarTheme(
+              backgroundColor: _primaryColor,
+              foregroundColor: _foregroundColor,
+            )),
+            home: const RandomWordsRoute()));
   }
 }
 
@@ -88,7 +95,7 @@ class RandomWordsRoute extends StatefulWidget {
 }
 
 class _RandomWordsRouteState extends State<RandomWordsRoute> {
-  final _suggestions = <WordPair>[];
+  final _suggestions = <String>[];
 
   @override
   Widget build(BuildContext context) {
@@ -121,13 +128,17 @@ class _RandomWordsRouteState extends State<RandomWordsRoute> {
 
             final index = i ~/ 2;
             if (index >= _suggestions.length) {
-              _suggestions.addAll(generateWordPairs().take(10));
+              _suggestions.addAll(
+                  generateWordPairs().take(10).map((e) => e.asPascalCase));
             }
 
-            final alreadySaved = _saved.contains(_suggestions[index]);
+            final alreadySaved = context
+                .watch<SavedNotifier>()
+                .saved
+                .contains(_suggestions[index]);
             return ListTile(
               title: Text(
-                _suggestions[index].asPascalCase,
+                _suggestions[index],
                 style: _biggerFont,
               ),
               trailing: Icon(
@@ -138,9 +149,9 @@ class _RandomWordsRouteState extends State<RandomWordsRoute> {
               onTap: () {
                 setState(() {
                   if (alreadySaved) {
-                    _saved.remove(_suggestions[index]);
+                    context.read<SavedNotifier>().remove(_suggestions[index]);
                   } else {
-                    _saved.add(_suggestions[index]);
+                    context.read<SavedNotifier>().add(_suggestions[index]);
                   }
                 });
               },
@@ -172,9 +183,9 @@ class SavedRoute extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tiles = _saved.map((pair) {
+    final tiles = context.watch<SavedNotifier>().saved.map((pair) {
       return Dismissible(
-          key: ValueKey<WordPair>(pair),
+          key: ValueKey<String>(pair),
           background: Container(
             color: _primaryColor,
             child: Row(
@@ -195,7 +206,7 @@ class SavedRoute extends StatelessWidget {
               builder: (BuildContext context) => AlertDialog(
                     title: const Text("Delete Suggestion"),
                     content: Text(
-                        "Are you sure you want to delete ${pair.asPascalCase} from your saved suggestions?"),
+                        "Are you sure you want to delete $pair from your saved suggestions?"),
                     actions: <Widget>[
                       OutlinedButton(
                         style: OutlinedButton.styleFrom(
@@ -220,9 +231,10 @@ class SavedRoute extends StatelessWidget {
                           child: const Text("No")),
                     ],
                   )),
+          onDismissed: (_) => context.read<SavedNotifier>().remove(pair),
           child: ListTile(
               title: Text(
-            pair.asPascalCase,
+            pair,
             style: _biggerFont,
           )));
     });
@@ -427,5 +439,61 @@ class UserDataNotifier extends ChangeNotifier {
 
   Future<void> signOut() async {
     await _auth.signOut();
+  }
+}
+
+class SavedNotifier extends ChangeNotifier {
+  final _firestore = FirebaseFirestore.instance;
+  final _saved = <String>{};
+  UserDataNotifier _userdata;
+
+  Set<String> get saved => Set.unmodifiable(_saved);
+
+  SavedNotifier(this._userdata) {
+    _sync(true);
+  }
+
+  bool add(String pair) {
+    if (_saved.add(pair)) {
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  bool remove(String pair) {
+    if (_saved.remove(pair)) {
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> _sync(bool merge) async {
+    if (_userdata.status == AuthStatus.authenticated) {
+      if (merge) {
+        var queryRes =
+        await _firestore.collection("users").doc(_userdata.user?.uid).get();
+        _saved.addAll(
+            ((queryRes.data()?["saved"] ?? <String>[]) as List).map((e) => e as String));
+      }
+      await _firestore
+          .collection("users")
+          .doc(_userdata.user?.uid)
+          .set({"saved": _saved.toList()}, SetOptions(merge: true));
+    }
+    if (merge) notifyListeners();
+  }
+
+  @override
+  void notifyListeners() {
+    _sync(false);
+    super.notifyListeners();
+  }
+
+  SavedNotifier update(UserDataNotifier userdata) {
+    _userdata = userdata;
+    _sync(true);
+    return this;
   }
 }
