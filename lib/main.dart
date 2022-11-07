@@ -13,13 +13,13 @@ const _baseIndent = 16.0;
 
 final _saved = <WordPair>{};
 
-void errorSnackbar(BuildContext context, String text) {
+void showSnackbar(BuildContext context, String text) {
   ScaffoldMessenger.of(context)
       .showSnackBar(SnackBar(content: Text(text, style: _biggerFont)));
 }
 
 void notImplemented(BuildContext context, String feature) {
-  errorSnackbar(context, "$feature is not implemented yet");
+  showSnackbar(context, "$feature is not implemented yet");
 }
 
 void main() {
@@ -101,6 +101,12 @@ class _RandomWordsRouteState extends State<RandomWordsRoute> {
             onPressed: _pushSaved,
             tooltip: 'Saved Suggestions',
           ),
+          context.watch<UserDataNotifier>().status == AuthStatus.authenticated ?
+          IconButton(
+            icon: const Icon(Icons.exit_to_app),
+            onPressed: _pushLogout,
+            tooltip: 'Logout',
+          ) :
           IconButton(
             icon: const Icon(Icons.login),
             onPressed: _pushLogin,
@@ -151,6 +157,11 @@ class _RandomWordsRouteState extends State<RandomWordsRoute> {
   void _pushLogin() {
     Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (context) => const LoginRoute()));
+  }
+
+  void _pushLogout() {
+    context.read<UserDataNotifier>()..signOut()..status = AuthStatus.unauthenticated;
+    showSnackbar(context, "Successfully logged out");
   }
 }
 
@@ -249,7 +260,7 @@ class _LoginRouteState extends State<LoginRoute> {
                             _emailController.text, _passwordController.text)) {
                           Navigator.of(context).pop();
                         } else {
-                          errorSnackbar(context,
+                          showSnackbar(context,
                               "There was an error logging into the app");
                         }
                       },
@@ -271,7 +282,7 @@ class _LoginRouteState extends State<LoginRoute> {
                             null) {
                           Navigator.of(context).pop();
                         } else {
-                          errorSnackbar(context,
+                          showSnackbar(context,
                               "There was an error signing up into the app");
                         }
                       },
@@ -325,7 +336,7 @@ class BusyChildWidget extends StatelessWidget {
   }
 }
 
-enum AuthStatus { unauthenticated, authenticating }
+enum AuthStatus { authenticated, unauthenticated, authenticating }
 
 class UserDataNotifier extends ChangeNotifier {
   final _auth = FirebaseAuth.instance;
@@ -339,7 +350,7 @@ class UserDataNotifier extends ChangeNotifier {
         _status = AuthStatus.unauthenticated;
       } else {
         _user = firebaseUser;
-        _status = AuthStatus.authenticating;
+        _status = AuthStatus.authenticated;
       }
       notifyListeners();
     });
@@ -384,5 +395,9 @@ class UserDataNotifier extends ChangeNotifier {
       notifyListeners();
       return null;
     }
+  }
+
+  Future<void> signOut() async {
+    await _auth.signOut();
   }
 }
