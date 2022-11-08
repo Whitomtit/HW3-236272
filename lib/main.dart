@@ -470,18 +470,17 @@ class SavedNotifier extends ChangeNotifier {
   }
 
   Future<void> _sync(bool merge) async {
-    if (_userdata.status == AuthStatus.authenticated) {
-      if (merge) {
-        var queryRes =
-        await _firestore.collection("users").doc(_userdata.user?.uid).get();
-        _saved.addAll(
-            ((queryRes.data()?["saved"] ?? <String>[]) as List).map((e) => e as String));
-      }
-      await _firestore
-          .collection("users")
-          .doc(_userdata.user?.uid)
-          .set({"saved": _saved.toList()}, SetOptions(merge: true));
+    if (_userdata.status != AuthStatus.authenticated) return;
+    if (merge) {
+      var queryRes =
+          await _firestore.collection("users").doc(_userdata.user?.uid).get();
+      _saved.addAll(((queryRes.data()?["saved"] ?? <String>[]) as List)
+          .map((e) => e as String));
     }
+    await _firestore
+        .collection("users")
+        .doc(_userdata.user?.uid)
+        .set({"saved": _saved.toList()}, SetOptions(merge: true));
     if (merge) notifyListeners();
   }
 
