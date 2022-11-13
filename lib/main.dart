@@ -399,6 +399,7 @@ class LoginRoute extends StatefulWidget {
 class _LoginRouteState extends State<LoginRoute> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -452,6 +453,52 @@ class _LoginRouteState extends State<LoginRoute> {
                     const SizedBox(height: _baseIndent),
                     ElevatedButton(
                       onPressed: () async {
+                        showModalBottomSheet(
+                            context: context,
+                            builder: (_) => Container(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.3,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(24.0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        const Text(
+                                          "Please confirm your password below:",
+                                          style: _biggerFont,
+                                        ),
+                                        const SizedBox(height: _baseIndent),
+                                        TextFormField(
+                                          decoration: const InputDecoration(
+                                              hintText: "Password"),
+                                          obscureText: true,
+                                          controller:
+                                              _confirmPasswordController,
+                                        ),
+                                        const SizedBox(height: _baseIndent),
+                                        ElevatedButton(
+                                            onPressed: () => notImplemented(
+                                                context, "signUp"),
+                                            style: ElevatedButton.styleFrom(
+                                                textStyle: const TextStyle(
+                                                    fontSize: 20,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                                backgroundColor: _primaryColor,
+                                                foregroundColor:
+                                                    _foregroundColor,
+                                                shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            30.0)),
+                                                minimumSize:
+                                                    const Size.fromHeight(40)),
+                                            child: const Text("Confirm"))
+                                      ],
+                                    ),
+                                  ),
+                                ));
                         if (await context.read<UserDataNotifier>().signUp(
                                 _emailController.text,
                                 _passwordController.text) !=
@@ -470,7 +517,7 @@ class _LoginRouteState extends State<LoginRoute> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30.0)),
                           minimumSize: const Size.fromHeight(40)),
-                      child: const Text("Sign up"),
+                      child: const Text("New user? Click to sign up"),
                     )
                   ],
                 ),
