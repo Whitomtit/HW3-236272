@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_words/english_words.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:snapping_sheet/snapping_sheet.dart';
 
 const _biggerFontSize = 18.0;
 const _biggerFont = TextStyle(fontSize: _biggerFontSize);
@@ -83,7 +84,182 @@ class MyApp extends StatelessWidget {
               backgroundColor: _primaryColor,
               foregroundColor: _foregroundColor,
             )),
-            home: const RandomWordsRoute()));
+            home: MainScreen()));
+  }
+}
+
+class AccountGrabbingWidget extends StatelessWidget {
+  const AccountGrabbingWidget({Key? key}) : super(key: key);
+
+  String _truncateWithEllipsis(String myString, int cutoff) {
+    return (myString.length <= cutoff)
+        ? myString
+        : '${myString.substring(0, cutoff)}...';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade400,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(blurRadius: 25, color: Colors.black.withOpacity(0.2)),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Text(
+            "Welcome back, ${_truncateWithEllipsis(context.read<UserDataNotifier>().user!.email!, 12)}",
+            style: _biggerFont,
+          ),
+          const Icon(
+            Icons.keyboard_arrow_up_rounded,
+            color: Colors.black,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class MainScreen extends StatelessWidget {
+  MainScreen({Key? key}) : super(key: key);
+
+  final snappingSheetController = SnappingSheetController();
+  double? _startSheetPosition;
+
+  static const _startSnapPosition = SnappingPosition.factor(
+    positionFactor: 0.0,
+    snappingCurve: Curves.easeOutExpo,
+    snappingDuration: Duration(seconds: 1),
+    grabbingContentOffset: GrabbingContentOffset.top,
+  );
+
+  static const _finalSnapPosition = SnappingPosition.factor(
+    snappingCurve: Curves.elasticOut,
+    snappingDuration: Duration(milliseconds: 1750),
+    positionFactor: 0.2,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(
+          title: const Text('Startup Name Generator'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.star),
+              onPressed: () => _pushSaved(context),
+              tooltip: 'Saved Suggestions',
+            ),
+            context.watch<UserDataNotifier>().status == AuthStatus.authenticated
+                ? IconButton(
+                    icon: const Icon(Icons.exit_to_app),
+                    onPressed: () => _pushLogout(context),
+                    tooltip: 'Logout',
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.login),
+                    onPressed: () => _pushLogin(context),
+                    tooltip: 'Login',
+                  )
+          ],
+        ),
+        body: context.read<UserDataNotifier>().status ==
+                AuthStatus.authenticated
+            ? SnappingSheet(
+                controller: snappingSheetController,
+                grabbing: GestureDetector(
+                  onTap: _toggleSnappingSheet,
+                  child: const AccountGrabbingWidget(),
+                ),
+                grabbingHeight: 75,
+                snappingPositions: const [
+                  _startSnapPosition,
+                  _finalSnapPosition,
+                ],
+                sheetBelow: SnappingSheetContent(
+                    sizeBehavior: SheetSizeStatic(size: 120),
+                    draggable: false,
+                    child: Container(
+                      color: Colors.white,
+                      child: Row(
+                        children: [
+                          const Flexible(
+                              fit: FlexFit.tight,
+                              flex: 2,
+                              child: CircleAvatar(
+                                radius: 45,
+                                backgroundImage: NetworkImage(
+                                    'https://i.natgeofe.com/k/6496b566-0510-4e92-84e8-7a0cf04aa505/red-fox-portrait_square.jpg'),
+                              )),
+                          Flexible(
+                            fit: FlexFit.tight,
+                            flex: 5,
+                            child: SizedBox(
+                              height: 120,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    context
+                                        .read<UserDataNotifier>()
+                                        .user!
+                                        .email!,
+                                    style: _biggerFont,
+                                  ),
+                                  ElevatedButton(
+                                      onPressed: () {},
+                                      style: ElevatedButton.styleFrom(
+                                        textStyle: const TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold),
+                                        backgroundColor: _primaryColor,
+                                        foregroundColor: _foregroundColor,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(30.0)),
+                                      ),
+                                      child: const Text("Change avatar"))
+                                ],
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    )),
+                child: const RandomWordsRoute(),
+              )
+            : const RandomWordsRoute());
+  }
+
+  void _toggleSnappingSheet() {
+    _startSheetPosition ??= snappingSheetController.currentPosition;
+    if (snappingSheetController.currentPosition > _startSheetPosition!) {
+      snappingSheetController.snapToPosition(_startSnapPosition);
+    } else {
+      snappingSheetController.snapToPosition(_finalSnapPosition);
+    }
+  }
+
+  void _pushSaved(BuildContext context) {
+    Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (context) => const SavedRoute()));
+  }
+
+  void _pushLogin(BuildContext context) {
+    Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (context) => const LoginRoute()));
+  }
+
+  void _pushLogout(BuildContext context) {
+    context.read<UserDataNotifier>()
+      ..signOut()
+      ..status = AuthStatus.unauthenticated;
+    showSnackbar(context, "Successfully logged out");
   }
 }
 
@@ -99,82 +275,42 @@ class _RandomWordsRouteState extends State<RandomWordsRoute> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Startup Name Generator'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.star),
-            onPressed: _pushSaved,
-            tooltip: 'Saved Suggestions',
-          ),
-          context.watch<UserDataNotifier>().status == AuthStatus.authenticated
-              ? IconButton(
-                  icon: const Icon(Icons.exit_to_app),
-                  onPressed: _pushLogout,
-                  tooltip: 'Logout',
-                )
-              : IconButton(
-                  icon: const Icon(Icons.login),
-                  onPressed: _pushLogin,
-                  tooltip: 'Login',
-                )
-        ],
-      ),
-      body: ListView.builder(
-          padding: const EdgeInsets.all(_baseIndent),
-          itemBuilder: (context, i) {
-            if (i.isOdd) return const Divider();
+    return ListView.builder(
+        padding: const EdgeInsets.all(_baseIndent),
+        itemBuilder: (context, i) {
+          if (i.isOdd) return const Divider();
 
-            final index = i ~/ 2;
-            if (index >= _suggestions.length) {
-              _suggestions.addAll(
-                  generateWordPairs().take(10).map((e) => e.asPascalCase));
-            }
+          final index = i ~/ 2;
+          if (index >= _suggestions.length) {
+            _suggestions.addAll(
+                generateWordPairs().take(10).map((e) => e.asPascalCase));
+          }
 
-            final alreadySaved = context
-                .watch<SavedNotifier>()
-                .saved
-                .contains(_suggestions[index]);
-            return ListTile(
-              title: Text(
-                _suggestions[index],
-                style: _biggerFont,
-              ),
-              trailing: Icon(
-                alreadySaved ? Icons.favorite : Icons.favorite_border,
-                color: alreadySaved ? Colors.red : null,
-                semanticLabel: alreadySaved ? 'Remove from saved' : 'Save',
-              ),
-              onTap: () {
-                setState(() {
-                  if (alreadySaved) {
-                    context.read<SavedNotifier>().remove(_suggestions[index]);
-                  } else {
-                    context.read<SavedNotifier>().add(_suggestions[index]);
-                  }
-                });
-              },
-            );
-          }),
-    );
-  }
-
-  void _pushSaved() {
-    Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (context) => const SavedRoute()));
-  }
-
-  void _pushLogin() {
-    Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (context) => const LoginRoute()));
-  }
-
-  void _pushLogout() {
-    context.read<UserDataNotifier>()
-      ..signOut()
-      ..status = AuthStatus.unauthenticated;
-    showSnackbar(context, "Successfully logged out");
+          final alreadySaved = context
+              .watch<SavedNotifier>()
+              .saved
+              .contains(_suggestions[index]);
+          return ListTile(
+            title: Text(
+              _suggestions[index],
+              style: _biggerFont,
+            ),
+            trailing: Icon(
+              alreadySaved ? Icons.favorite : Icons.favorite_border,
+              color: alreadySaved ? Colors.red : null,
+              semanticLabel: alreadySaved ? 'Remove from saved' : 'Save',
+            ),
+            onTap: () {
+              setState(() {
+                if (alreadySaved) {
+                  context.read<SavedNotifier>().remove(_suggestions[index]);
+                } else {
+                  context.read<SavedNotifier>().add(_suggestions[index]);
+                }
+              });
+            },
+          );
+        });
   }
 }
 
