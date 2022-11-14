@@ -184,6 +184,7 @@ class MainScreen extends StatelessWidget {
                     sizeBehavior: SheetSizeStatic(size: 120),
                     draggable: false,
                     child: Container(
+                      alignment: Alignment.topCenter,
                       color: Colors.white,
                       child: Row(
                         children: [
@@ -217,7 +218,7 @@ class MainScreen extends StatelessWidget {
                                         textStyle: const TextStyle(
                                             fontSize: 20,
                                             fontWeight: FontWeight.bold),
-                                        backgroundColor: _primaryColor,
+                                        backgroundColor: Colors.blue,
                                         foregroundColor: _foregroundColor,
                                         shape: RoundedRectangleBorder(
                                             borderRadius:
@@ -399,7 +400,7 @@ class LoginRoute extends StatefulWidget {
 class _LoginRouteState extends State<LoginRoute> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
@@ -455,59 +456,74 @@ class _LoginRouteState extends State<LoginRoute> {
                       onPressed: () async {
                         showModalBottomSheet(
                             context: context,
-                            builder: (_) => Container(
-                                  height:
-                                      MediaQuery.of(context).size.height * 0.3,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(24.0),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        const Text(
-                                          "Please confirm your password below:",
-                                          style: _biggerFont,
-                                        ),
-                                        const SizedBox(height: _baseIndent),
-                                        TextFormField(
-                                          decoration: const InputDecoration(
-                                              hintText: "Password"),
-                                          obscureText: true,
-                                          controller:
-                                              _confirmPasswordController,
-                                        ),
-                                        const SizedBox(height: _baseIndent),
-                                        ElevatedButton(
-                                            onPressed: () => notImplemented(
-                                                context, "signUp"),
-                                            style: ElevatedButton.styleFrom(
-                                                textStyle: const TextStyle(
-                                                    fontSize: 20,
-                                                    fontWeight:
-                                                        FontWeight.bold),
-                                                backgroundColor: _primaryColor,
-                                                foregroundColor:
-                                                    _foregroundColor,
-                                                shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            30.0)),
-                                                minimumSize:
-                                                    const Size.fromHeight(40)),
-                                            child: const Text("Confirm"))
-                                      ],
+                            builder: (context) => Form(
+                                  key: _formKey,
+                                  child: SizedBox(
+                                    height: MediaQuery.of(context).size.height *
+                                            0.3 +
+                                        MediaQuery.of(context)
+                                            .viewInsets
+                                            .bottom,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          const Text(
+                                            "Please confirm your password below:",
+                                            style: _biggerFont,
+                                          ),
+                                          const SizedBox(height: _baseIndent),
+                                          TextFormField(
+                                            validator: (value) {
+                                              if (value !=
+                                                  _passwordController.text) {
+                                                return "Passwords must match";
+                                              }
+                                              return null;
+                                            },
+                                            decoration: const InputDecoration(
+                                                hintText: "Password"),
+                                            obscureText: true,
+                                          ),
+                                          const SizedBox(height: _baseIndent),
+                                          ElevatedButton(
+                                              onPressed: () {
+                                                if (_formKey.currentState!
+                                                    .validate()) {
+                                                  context
+                                                      .read<UserDataNotifier>()
+                                                      .signUp(
+                                                          _emailController.text,
+                                                          _passwordController
+                                                              .text);
+                                                  Navigator.of(context)
+                                                    ..pop()
+                                                    ..pop();
+                                                }
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                  textStyle: const TextStyle(
+                                                      fontSize: 20,
+                                                      fontWeight:
+                                                          FontWeight.bold),
+                                                  backgroundColor: Colors.blue,
+                                                  foregroundColor:
+                                                      _foregroundColor,
+                                                  shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              30.0)),
+                                                  minimumSize:
+                                                      const Size.fromHeight(
+                                                          40)),
+                                              child: const Text("Confirm")),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ));
-                        if (await context.read<UserDataNotifier>().signUp(
-                                _emailController.text,
-                                _passwordController.text) !=
-                            null) {
-                          Navigator.of(context).pop();
-                        } else {
-                          showSnackbar(context,
-                              "There was an error signing up into the app");
-                        }
                       },
                       style: ElevatedButton.styleFrom(
                           textStyle: const TextStyle(
