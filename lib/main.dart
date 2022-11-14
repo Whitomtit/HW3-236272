@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_words/english_words.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:snapping_sheet/snapping_sheet.dart';
 
@@ -127,7 +131,8 @@ class AccountGrabbingWidget extends StatelessWidget {
 class MainScreen extends StatelessWidget {
   MainScreen({Key? key}) : super(key: key);
 
-  final snappingSheetController = SnappingSheetController();
+  final _snappingSheetController = SnappingSheetController();
+  final _imagePicker = ImagePicker();
   double? _startSheetPosition;
 
   static const _startSnapPosition = SnappingPosition.factor(
@@ -170,7 +175,7 @@ class MainScreen extends StatelessWidget {
         body: context.read<UserDataNotifier>().status ==
                 AuthStatus.authenticated
             ? SnappingSheet(
-                controller: snappingSheetController,
+                controller: _snappingSheetController,
                 grabbing: GestureDetector(
                   onTap: _toggleSnappingSheet,
                   child: const AccountGrabbingWidget(),
@@ -188,14 +193,21 @@ class MainScreen extends StatelessWidget {
                       color: Colors.white,
                       child: Row(
                         children: [
-                          const Flexible(
+                          Flexible(
                               fit: FlexFit.tight,
                               flex: 2,
-                              child: CircleAvatar(
-                                radius: 45,
-                                backgroundImage: NetworkImage(
-                                    'https://i.natgeofe.com/k/6496b566-0510-4e92-84e8-7a0cf04aa505/red-fox-portrait_square.jpg'),
-                              )),
+                              child: FutureBuilder<ImageProvider>(
+                                  future:
+                                      context.watch<UserDataNotifier>().avatar,
+                                  builder: (context, snapshot) {
+                                    if (snapshot.hasData) {
+                                      return CircleAvatar(
+                                        radius: 45,
+                                        backgroundImage: snapshot.requireData,
+                                      );
+                                    }
+                                    return const LoadingWidget();
+                                  })),
                           Flexible(
                             fit: FlexFit.tight,
                             flex: 5,
@@ -213,7 +225,8 @@ class MainScreen extends StatelessWidget {
                                     style: _biggerFont,
                                   ),
                                   ElevatedButton(
-                                      onPressed: () {},
+                                      onPressed: () => _changeAvatar(
+                                          context.read<UserDataNotifier>()),
                                       style: ElevatedButton.styleFrom(
                                         textStyle: const TextStyle(
                                             fontSize: 20,
@@ -237,12 +250,19 @@ class MainScreen extends StatelessWidget {
             : const RandomWordsRoute());
   }
 
+  Future<void> _changeAvatar(UserDataNotifier userdata) async {
+    XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      userdata.updateAvatar(File(image.path));
+    }
+  }
+
   void _toggleSnappingSheet() {
-    _startSheetPosition ??= snappingSheetController.currentPosition;
-    if (snappingSheetController.currentPosition > _startSheetPosition!) {
-      snappingSheetController.snapToPosition(_startSnapPosition);
+    _startSheetPosition ??= _snappingSheetController.currentPosition;
+    if (_snappingSheetController.currentPosition > _startSheetPosition!) {
+      _snappingSheetController.snapToPosition(_startSnapPosition);
     } else {
-      snappingSheetController.snapToPosition(_finalSnapPosition);
+      _snappingSheetController.snapToPosition(_finalSnapPosition);
     }
   }
 
@@ -578,14 +598,17 @@ class BusyChildWidget extends StatelessWidget {
 enum AuthStatus { authenticated, unauthenticated, authenticating }
 
 class UserDataNotifier extends ChangeNotifier {
-  final _auth = FirebaseAuth.instance;
+  static final _avatars = FirebaseStorage.instance.ref().child("avatars");
+  static final _auth = FirebaseAuth.instance;
   var _status = AuthStatus.unauthenticated;
   User? _user;
+  File? _localAvatar;
 
   UserDataNotifier() {
     _auth.authStateChanges().listen((User? firebaseUser) async {
       if (firebaseUser == null) {
         _user = null;
+        _localAvatar = null;
         _status = AuthStatus.unauthenticated;
       } else {
         _user = firebaseUser;
@@ -598,6 +621,18 @@ class UserDataNotifier extends ChangeNotifier {
   AuthStatus get status => _status;
 
   User? get user => _user;
+
+  Future<ImageProvider> get avatar async {
+    if (_localAvatar == null) {
+      try {
+        return NetworkImage(await _avatars.child(_user!.uid).getDownloadURL());
+      } on FirebaseException catch (e) {
+        return const AssetImage("images/default_avatar.png");
+      }
+    } else {
+      return FileImage(_localAvatar!);
+    }
+  }
 
   set status(AuthStatus status) {
     _status = status;
@@ -638,6 +673,12 @@ class UserDataNotifier extends ChangeNotifier {
 
   Future<void> signOut() async {
     await _auth.signOut();
+  }
+
+  Future<void> updateAvatar(File image) async {
+    _localAvatar = image;
+    notifyListeners();
+    await _avatars.child(_user!.uid).putFile(image);
   }
 }
 
