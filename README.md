@@ -1,16 +1,13 @@
-# hello_me
+## Dry Questions
 
-A new Flutter project.
+### Question 1
 
-## Getting Started
+**SnappingSheetController** is used. This controller allows the developer to change the position of the snap (with or without specified animation) or to stop the snapping. In additions, it provides the developer with an information about the position of the snap or its current state of an animation.
 
-This project is a starting point for a Flutter application.
+### Question 2
 
-A few resources to get you started if this is your first Flutter project:
+**SnappingPosition** holds the parameters of the position to snap into, a type of the animation (*snappingCurve*) and its duration (*snappingDuration*). A list of **SnappingPosition**s may be sent as a parameter (*snappingPositions*) to the constructor to define permanently positions and animations of the snap or used one-time via the controller.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### Question 3
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+**Inkwell** provides a fancy animation of the wave from the point of the click, but **GestureDetector** allows to recognize different types of touches (double touch, long touch etc).
