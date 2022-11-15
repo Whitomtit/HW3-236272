@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -142,10 +143,10 @@ class MainScreen extends StatelessWidget {
     grabbingContentOffset: GrabbingContentOffset.top,
   );
 
-  static const _finalSnapPosition = SnappingPosition.factor(
+  static const _finalSnapPosition = SnappingPosition.pixels(
     snappingCurve: Curves.elasticOut,
     snappingDuration: Duration(milliseconds: 1750),
-    positionFactor: 0.2,
+    positionPixels: 160,
   );
 
   @override
@@ -625,8 +626,13 @@ class UserDataNotifier extends ChangeNotifier {
   Future<ImageProvider> get avatar async {
     if (_localAvatar == null) {
       try {
-        return NetworkImage(await _avatars.child(_user!.uid).getDownloadURL());
-      } on FirebaseException catch (e) {
+        Completer<NetworkImage> completer = Completer<NetworkImage>();
+        NetworkImage avatar =
+            NetworkImage(await _avatars.child(_user!.uid).getDownloadURL());
+        avatar.resolve(ImageConfiguration.empty).addListener(
+            ImageStreamListener((info, call) => completer.complete(avatar)));
+        return completer.future;
+      } on FirebaseException catch (_) {
         return const AssetImage("images/default_avatar.png");
       }
     } else {
